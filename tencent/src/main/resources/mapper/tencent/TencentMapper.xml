@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tencent.tencent.dao.mapper.TencentMapper">
+    <resultMap id="rs_base" type="com.tencent.tencent.entity.Tencent">
+        <result property="id" column="id"/>
+        <result property="qq" column="qq"/>
+        <result property="email" column="email"/>
+        <result property="phone" column="phone"/>
+    </resultMap>
+
+
+    <sql id="columns">
+    id,qq,email,phone
+    </sql>
+
+    <sql id="where">
+        <where>
+            <if test="id!=null and id!=''">
+                AND id = #{id}
+            </if>
+            <if test="qq!=null and qq!=''">
+                AND qq = #{qq}
+            </if>
+            <if test="email!=null and email!=''">
+                AND email = #{email}
+            </if>
+            <if test="phone!=null and phone!=''">
+                AND phone = #{phone}
+            </if>
+        </where>
+    </sql>
+
+</mapper>

@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: tencent-api
+  cloud:
+
+    #注册中心配置
+    nacos:
+      discovery:
+        server-addr: ${REGISTER_HOST:{your_host}}:${REGISTER_PORT:8848}
+        group: DEFAULT_GROUP
+        namespace: 4fd50f88-83d5-49c3-9f4e-304d17b2a356
+      config:
+        server-addr: ${REGISTER_HOST:{your_host}}:${REGISTER_PORT:8848}
+        group: DEFAULT_GROUP
+        name: tencent
+        file-extension: yml
+        namespace: 4fd50f88-83d5-49c3-9f4e-304d17b2a356
