@@ -15,6 +15,7 @@ import java.util.List;
  * @author watson
  */
 public interface TencentService extends IService<Tencent> {
+    void importTxt();
 }
 
 

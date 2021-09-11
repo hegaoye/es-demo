@@ -49,7 +49,7 @@ public class TencentController {
     @ApiOperation(value = "创建Tencent", notes = "创建Tencent")
     @PostMapping("/build")
     public TencentSaveVO build(@ApiParam(name = "创建Tencent", value = "传入json格式", required = true)
-                                   @RequestBody TencentSaveVO tencentSaveVO) {
+                               @RequestBody TencentSaveVO tencentSaveVO) {
         if (StringUtils.isBlank(tencentSaveVO.getId())) {
             throw new TencentException(BaseException.BaseExceptionEnum.Empty_Param);
         }
@@ -65,9 +65,9 @@ public class TencentController {
 
         int count = tencentService.count(new LambdaQueryWrapper<Tencent>()
                 .eq(Tencent::getId, tencentSaveVO.getId())
-                        .eq(Tencent::getQq, tencentSaveVO.getQq())
-                        .eq(Tencent::getEmail, tencentSaveVO.getEmail())
-                        .eq(Tencent::getPhone, tencentSaveVO.getPhone())
+                .eq(Tencent::getQq, tencentSaveVO.getQq())
+                .eq(Tencent::getEmail, tencentSaveVO.getEmail())
+                .eq(Tencent::getPhone, tencentSaveVO.getPhone())
         );
         if (count > 0) {
             throw new TencentException(BaseException.BaseExceptionEnum.Exists);
@@ -101,6 +101,7 @@ public class TencentController {
         log.debug(JSON.toJSONString(tencentVO));
         return tencentVO;
     }
+
     /**
      * 根据条件email查询腾讯数据一个详情信息
      *
@@ -116,6 +117,18 @@ public class TencentController {
         BeanUtils.copyProperties(tencent, tencentVO);
         log.debug(JSON.toJSONString(tencentVO));
         return tencentVO;
+    }
+
+    /**
+     * 引入數據
+     *
+     * @return TencentVO
+     */
+    @ApiOperation(value = "引入數據", notes = "引入數據")
+    @GetMapping("/import")
+    public Boolean importTxt() {
+        tencentService.importTxt();
+        return true;
     }
 
     /**
@@ -136,7 +149,7 @@ public class TencentController {
         if (total > 0) {
             queryWrapper.lambda().orderByDesc(Tencent::getId);
 
-            IPage<Tencent> tencentPage = tencentService.page(page,queryWrapper);
+            IPage<Tencent> tencentPage = tencentService.page(page, queryWrapper);
             List<TencentPageVO> tencentPageVOList = JSON.parseArray(JSON.toJSONString(tencentPage.getRecords()), TencentPageVO.class);
             IPage<TencentPageVO> iPage = new Page<>();
             iPage.setPages(tencentPage.getPages());

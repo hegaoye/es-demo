@@ -6,12 +6,12 @@ spring:
     #注册中心配置
     nacos:
       discovery:
-        server-addr: ${REGISTER_HOST:{your_host}}:${REGISTER_PORT:8848}
+        server-addr: ${REGISTER_HOST:http://test.cg45.xyz:31014}
         group: DEFAULT_GROUP
-        namespace: 4fd50f88-83d5-49c3-9f4e-304d17b2a356
+        namespace: c8554b49-0071-4c2a-bae3-3499a01693b1
       config:
-        server-addr: ${REGISTER_HOST:{your_host}}:${REGISTER_PORT:8848}
+        server-addr: ${REGISTER_HOST:http://test.cg45.xyz:31014}
         group: DEFAULT_GROUP
         name: tencent
         file-extension: yml
-        namespace: 4fd50f88-83d5-49c3-9f4e-304d17b2a356
+        namespace: c8554b49-0071-4c2a-bae3-3499a01693b1
