@@ -87,12 +87,14 @@ public class TencentServiceImpl extends ServiceImpl<TencentMapper, Tencent> impl
                     }
                 }
 
-                try {
-                    //2.插入數據
-                    this.saveBatch(list);
-                    list.clear();
-                } catch (Exception e) {
-                    log.error("{}", e.getLocalizedMessage(), e);
+                if (!CollectionUtils.isEmpty(list)) {
+                    try {
+                        //2.插入數據
+                        this.saveBatch(list);
+                        list.clear();
+                    } catch (Exception e) {
+                        log.error("{}", e.getLocalizedMessage(), e);
+                    }
                 }
 
             }
