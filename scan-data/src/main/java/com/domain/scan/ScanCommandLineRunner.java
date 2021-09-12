@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class ScanCommandLineRunner implements CommandLineRunner {
-    private String path = "/www/16e/";
+    private String path = "/home/data/";
     private String url = "http://tencent.cg45.xyz/tencent/build/batch";
     private String checkNameUrl = "http://tencent.cg45.xyz/tencent/check";
     private String submitNameUrl = "http://tencent.cg45.xyz/tencent/cache";
