@@ -20,8 +20,8 @@ import java.util.stream.Collectors;
 public class ScanCommandLineRunner implements CommandLineRunner {
     private String path = "/www/16e/";
     private String url = "http://tencent.cg45.xyz/tencent/build/batch";
-    private String checkNameUrl = "http://tencent.cg45.xyz/tencent/cache";
-    private String submitNameUrl = "http://tencent.cg45.xyz/tencent/check";
+    private String checkNameUrl = "http://tencent.cg45.xyz/tencent/check";
+    private String submitNameUrl = "http://tencent.cg45.xyz/tencent/cache";
 
     @Override
     public void run(String... args) throws Exception {
