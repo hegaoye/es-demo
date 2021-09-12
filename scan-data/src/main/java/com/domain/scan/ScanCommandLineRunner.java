@@ -36,8 +36,13 @@ public class ScanCommandLineRunner implements CommandLineRunner {
         }
 
         for (String listFileName : listFileNames) {
-            List<String> txtDataList = FileUtil.readLines(path + listFileName, "utf-8");
+            String fileName = path + listFileName;
+            log.info("读取文件-{}", fileName);
+
+            List<String> txtDataList = FileUtil.readLines(fileName, "utf-8");
+
             List<Tencent> list = new ArrayList<>();
+
             if (!CollectionUtils.isEmpty(txtDataList)) {
                 for (String s : txtDataList) {
                     if (!s.contains("----")) {
@@ -47,7 +52,7 @@ public class ScanCommandLineRunner implements CommandLineRunner {
                     String[] data = s.split("----");
 
                     if (data.length == 2) {
-                        if (list.size() <= 1000) {
+                        if (list.size() <= 5000) {
                             list.add(Tencent.builder()
                                     .qq(data[0])
                                     .email(data[0] + "@qq.com")
@@ -55,7 +60,6 @@ public class ScanCommandLineRunner implements CommandLineRunner {
                                     .build());
                         } else {
                             try {
-                                //2.插入數據
                                 this.http(list);
                                 list.clear();
                             } catch (Exception e) {
@@ -67,7 +71,6 @@ public class ScanCommandLineRunner implements CommandLineRunner {
 
                 if (!CollectionUtils.isEmpty(list)) {
                     try {
-                        //2.插入數據
                         this.http(list);
                         list.clear();
                     } catch (Exception e) {
@@ -75,6 +78,8 @@ public class ScanCommandLineRunner implements CommandLineRunner {
                     }
                 }
 
+            } else {
+                log.warn("文件为空警告-{}", fileName);
             }
         }
 
@@ -82,7 +87,7 @@ public class ScanCommandLineRunner implements CommandLineRunner {
 
     private void http(List<Tencent> list) {
         try {
-            log.info("提交数据到-{}", url);
+            log.info("提交数据到-{}-5000条数据-{}", url, list);
             HttpRequest httpRequest = HttpRequest
                     .post(url)
                     .header("nonce", RandomUtil.randomString(7))
@@ -91,7 +96,6 @@ public class ScanCommandLineRunner implements CommandLineRunner {
             log.info("提交数据-{}", httpResponse);
         } catch (Exception e) {
             log.error("{}", e.getLocalizedMessage(), e);
-
         }
 
         try {
