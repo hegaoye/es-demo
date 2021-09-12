@@ -1,0 +1,8 @@
+server:
+  port: 8080
+
+domian-api:
+  domainPoolUrl: ${domainPoolUrl:http://test.cg45.xyz:31108/domainPool/list}
+  testRecordUrl: ${testRecordUrl:http://test.cg45.xyz:31108/testRecord/build/list}
+  city: ${city:深圳}
+

@@ -11,9 +11,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.tencent.cache.entity.RedisKey;
+import com.tencent.cache.service.RedisServiceSVImpl;
 import com.tencent.core.entity.R;
 import com.tencent.core.exceptions.BaseException;
 import com.tencent.core.exceptions.TencentException;
+import com.tencent.core.tools.Executors;
 import com.tencent.tencent.entity.Tencent;
 import com.tencent.tencent.service.TencentService;
 import com.tencent.tencent.vo.TencentPageVO;
@@ -54,6 +57,47 @@ import java.util.Locale;
 public class TencentController {
     @Autowired
     private TencentService tencentService;
+
+    @Autowired
+    private RedisServiceSVImpl redisServiceSV;
+
+
+    /**
+     * 创建 腾讯数据
+     *
+     * @return R
+     */
+    @ApiOperation(value = "创建Tencent", notes = "创建Tencent")
+    @GetMapping("/cache")
+    public R cacheNames(String name) {
+        if (StringUtils.isBlank(name)) {
+            return R.failed(BaseException.BaseExceptionEnum.Empty_Param);
+        }
+        log.info("缓存文件名-{}", name);
+
+        String cacheKey = RedisKey.FileName.genFileNameCacheKey();
+        List<String> list = new ArrayList<>();
+        if (redisServiceSV.hasKey(cacheKey)) {
+            list = (List<String>) redisServiceSV.get(cacheKey);
+        }
+
+        list.add(name);
+        redisServiceSV.set(cacheKey, list);
+
+        return R.success();
+    }
+
+    @ApiOperation(value = "创建Tencent", notes = "创建Tencent")
+    @GetMapping("/check")
+    public R checkNames() {
+        String cacheKey = RedisKey.FileName.genFileNameCacheKey();
+        List<String> list = new ArrayList<>();
+        if (redisServiceSV.hasKey(cacheKey)) {
+            list = (List<String>) redisServiceSV.get(cacheKey);
+        }
+        log.info("{}", list);
+        return R.success(list);
+    }
 
 
     /**
@@ -101,6 +145,38 @@ public class TencentController {
 
 
     /**
+     * 批量保存 腾讯数据
+     *
+     * @return R
+     */
+    @ApiOperation(value = "批量保存", notes = "批量保存")
+    @PostMapping("/build/batch")
+    public Boolean batchBuild(@ApiParam(name = "批量保存", value = "传入json格式", required = true)
+                              @RequestBody List<TencentSaveVO> list) {
+        Executors.fixedThreadExecutor(new Runnable() {
+            @Override
+            public void run() {
+                for (TencentSaveVO tencentSaveVO : list) {
+                    int count = tencentService.count(new LambdaQueryWrapper<Tencent>()
+                            .eq(Tencent::getQq, tencentSaveVO.getQq()));
+
+                    if (count > 0) {
+                        continue;
+                    }
+
+                    Tencent newTencent = new Tencent();
+                    BeanUtils.copyProperties(tencentSaveVO, newTencent);
+
+                    tencentService.save(newTencent);
+                }
+            }
+        });
+
+        return true;
+    }
+
+
+    /**
      * 根据条件qq查询腾讯数据一个详情信息
      *
      * @param qq qq
@@ -132,18 +208,6 @@ public class TencentController {
         BeanUtils.copyProperties(tencent, tencentVO);
         log.debug(JSON.toJSONString(tencentVO));
         return tencentVO;
-    }
-
-    /**
-     * 引入數據
-     *
-     * @return TencentVO
-     */
-    @ApiOperation(value = "引入數據", notes = "引入數據")
-    @GetMapping("/import")
-    public Boolean importTxt() {
-        tencentService.importTxt();
-        return true;
     }
 
 

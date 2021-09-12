@@ -1,7 +1,7 @@
 package com.tencent.config;
 
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
-import com.tencent.RedisKey;
+import com.tencent.cache.entity.RedisKey;
 import com.tencent.cache.service.RedisServiceSVImpl;
 import com.tencent.core.annotation.CacheEnumTools;
 import lombok.extern.slf4j.Slf4j;

@@ -3,4 +3,5 @@ include 'common'
 include 'facade'
 
 include 'tencent'
+include 'scan-data'
 
