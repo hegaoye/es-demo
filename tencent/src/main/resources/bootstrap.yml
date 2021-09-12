@@ -2,16 +2,14 @@ spring:
   application:
     name: tencent-api
   cloud:
-
-    #注册中心配置
     nacos:
       discovery:
-        server-addr: ${REGISTER_HOST:http://test.cg45.xyz:31014}
+        server-addr: ${REGISTER_HOST}
         group: DEFAULT_GROUP
-        namespace: c8554b49-0071-4c2a-bae3-3499a01693b1
+        namespace: ${NAMESPACE}
       config:
-        server-addr: ${REGISTER_HOST:http://test.cg45.xyz:31014}
+        server-addr: ${REGISTER_HOST}
         group: DEFAULT_GROUP
-        name: tencent
+        name: ${CONFIG_NAME:tencent}
         file-extension: yml
-        namespace: c8554b49-0071-4c2a-bae3-3499a01693b1
+        namespace: ${NAMESPACE}
