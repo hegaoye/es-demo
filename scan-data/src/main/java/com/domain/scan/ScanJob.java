@@ -138,10 +138,9 @@ public class ScanJob {
         }
 
         try {
-            submitNameUrl = submitNameUrl + "?name=" + fileName;
-            log.info("完成文件名-{}", submitNameUrl);
-            HttpRequest httpRequest = HttpRequest
-                    .get(submitNameUrl);
+            String subUrl = submitNameUrl + "?name=" + fileName;
+            log.info("完成文件名-{}", subUrl);
+            HttpRequest httpRequest = HttpRequest.get(subUrl);
             HttpResponse httpResponse = httpRequest.execute();
             log.info("完成文件名-{}", httpResponse);
         } catch (Exception e) {
