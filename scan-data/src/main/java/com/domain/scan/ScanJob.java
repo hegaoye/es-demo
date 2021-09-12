@@ -126,7 +126,7 @@ public class ScanJob {
 
     private void http(List<Tencent> list, String fileName) {
         try {
-            log.info("提交数据到-{}-1000条数据-{}", url, list);
+            log.info("提交数据到-{}-1000条数据", url);
             HttpRequest httpRequest = HttpRequest
                     .post(url)
                     .header("nonce", RandomUtil.randomString(7))
