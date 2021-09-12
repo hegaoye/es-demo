@@ -7,6 +7,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.alibaba.fastjson.JSON;
+import com.baidu.fsg.uid.UidGenerator;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -16,7 +17,6 @@ import com.tencent.cache.service.RedisServiceSVImpl;
 import com.tencent.core.entity.R;
 import com.tencent.core.exceptions.BaseException;
 import com.tencent.core.exceptions.TencentException;
-import com.tencent.core.tools.Executors;
 import com.tencent.tencent.entity.Tencent;
 import com.tencent.tencent.service.TencentService;
 import com.tencent.tencent.vo.TencentPageVO;
@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 /**
  * 腾讯数据
@@ -61,6 +62,8 @@ public class TencentController {
     @Autowired
     private RedisServiceSVImpl redisServiceSV;
 
+    @Autowired
+    private UidGenerator uidGenerator;
 
     /**
      * 创建 腾讯数据
@@ -153,25 +156,18 @@ public class TencentController {
     @PostMapping("/build/batch")
     public Boolean batchBuild(@ApiParam(name = "批量保存", value = "传入json格式", required = true)
                               @RequestBody List<TencentSaveVO> list) {
-        Executors.fixedThreadExecutor(new Runnable() {
-            @Override
-            public void run() {
-                for (TencentSaveVO tencentSaveVO : list) {
-                    int count = tencentService.count(new LambdaQueryWrapper<Tencent>()
-                            .eq(Tencent::getQq, tencentSaveVO.getQq()));
+        List<Tencent> tencentList = tencentService.list(new LambdaQueryWrapper<Tencent>()
+                .in(Tencent::getQq, list.stream().map(tencentSaveVO1 -> tencentSaveVO1.getQq()).collect(Collectors.toSet())));
 
-                    if (count > 0) {
-                        continue;
-                    }
+        if (CollectionUtils.isEmpty(tencentList)) {
+            return false;
+        }
 
-                    Tencent newTencent = new Tencent();
-                    BeanUtils.copyProperties(tencentSaveVO, newTencent);
+        List<String> qqList = tencentList.stream().map(tencent -> tencent.getQq()).collect(Collectors.toList());
+        list = list.stream().filter(tencentSaveVO1 -> !qqList.contains(tencentSaveVO1.getQq())).collect(Collectors.toList());
 
-                    tencentService.save(newTencent);
-                }
-            }
-        });
-
+        List<Tencent> newTencentList = JSON.parseArray(JSON.toJSONString(list), Tencent.class);
+        tencentService.saveBatch(newTencentList);
         return true;
     }
 
@@ -301,7 +297,7 @@ public class TencentController {
             @ApiImplicitParam(name = "keywords", value = "分页大小", required = true, paramType = "query")
     })
     @GetMapping(value = "/list")
-    public IPage<TencentPageVO> list(String keywords, Integer curPage, Integer pageSize) {
+    public R list(String keywords, Integer curPage, Integer pageSize) {
         IPage<Tencent> page = new Page<>(curPage, pageSize);
         QueryWrapper<Tencent> queryWrapper = new QueryWrapper<>();
         if (StringUtils.isNotBlank(keywords)) {
@@ -321,9 +317,9 @@ public class TencentController {
             iPage.setTotal(tencentPage.getTotal());
             iPage.setRecords(tencentPageVOList);
             log.debug(JSON.toJSONString(iPage));
-            return iPage;
+            return R.success(iPage);
         }
-        return new Page<>();
+        return R.success(new Page<>());
     }
 
 

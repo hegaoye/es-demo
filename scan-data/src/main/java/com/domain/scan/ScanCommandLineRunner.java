@@ -18,10 +18,11 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class ScanCommandLineRunner implements CommandLineRunner {
-    private String path = "/www/16e/";
-    private String url = "http://tencent.cg45.xyz/tencent/build/batch";
-    private String checkNameUrl = "http://tencent.cg45.xyz/tencent/cache";
-    private String submitNameUrl = "http://tencent.cg45.xyz/tencent/check";
+    private String path = "/Users/watson/IdeaProjects/data-backend/data/";
+    //    private String path = "/www/16e/";
+    private String url = "http://127.0.0.1:8080/tencent/build/batch";
+    private String checkNameUrl = "http://127.0.0.1:8080/tencent/cache";
+    private String submitNameUrl = "http://127.0.0.1:8080/tencent/check";
 
     @Override
     public void run(String... args) throws Exception {
@@ -30,7 +31,10 @@ public class ScanCommandLineRunner implements CommandLineRunner {
             return;
         }
         List<String> oldNameList = listName();
-        listFileNames = listFileNames.stream().filter(s -> !oldNameList.contains(s)).collect(Collectors.toList());
+        if (!CollectionUtils.isEmpty(oldNameList)) {
+            listFileNames = listFileNames.stream().filter(s -> !oldNameList.contains(s)).collect(Collectors.toList());
+        }
+
         if (CollectionUtils.isEmpty(listFileNames)) {
             return;
         }
