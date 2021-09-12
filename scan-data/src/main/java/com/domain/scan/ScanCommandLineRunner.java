@@ -18,11 +18,10 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class ScanCommandLineRunner implements CommandLineRunner {
-    private String path = "/Users/watson/IdeaProjects/data-backend/data/";
-    //    private String path = "/www/16e/";
-    private String url = "http://127.0.0.1:8080/tencent/build/batch";
-    private String checkNameUrl = "http://127.0.0.1:8080/tencent/check";
-    private String submitNameUrl = "http://127.0.0.1:8080/tencent/cache";
+    private String path = "/www/16e/";
+    private String url = "http://tencent.cg45.xyz/tencent/build/batch";
+    private String checkNameUrl = "http://tencent.cg45.xyz/tencent/check";
+    private String submitNameUrl = "http://tencent.cg45.xyz/tencent/cache";
 
     @Override
     public void run(String... args) throws Exception {
