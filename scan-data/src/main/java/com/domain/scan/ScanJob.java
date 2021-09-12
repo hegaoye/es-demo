@@ -38,9 +38,10 @@ public class ScanJob {
      * 监测调度
      * 每5分鐘一次監測
      */
-    @Scheduled(cron = "0 0/5 * * * ?")
+    @Scheduled(cron = "0/10 * * * * ?")
     public void nodeDetectTask() {
         try {
+
             if (!isRunable) {
                 log.info("開始掃描文件");
                 isRunable = true;
