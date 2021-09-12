@@ -153,7 +153,7 @@ public class TencentController {
      * @param multipartFile 上传文件
      * @return
      */
-    @ApiOperation(value = "导入Excel", notes = "导入Excel")
+    @ApiOperation(value = "上传csv文件", notes = "上传csv文件")
     @PostMapping("/upload")
     public void upload(@RequestParam("file") MultipartFile multipartFile, HttpServletResponse response) {
         if (null == multipartFile) {
@@ -234,15 +234,20 @@ public class TencentController {
     @ApiImplicitParams({
             @ApiImplicitParam(name = "curPage", value = "当前页", required = true, paramType = "query"),
             @ApiImplicitParam(name = "pageSize", value = "分页大小", required = true, paramType = "query"),
+            @ApiImplicitParam(name = "keywords", value = "分页大小", required = true, paramType = "query")
     })
     @GetMapping(value = "/list")
-    public IPage<TencentPageVO> list(@ApiIgnore TencentPageVO tencentVO, Integer curPage, Integer pageSize) {
+    public IPage<TencentPageVO> list(String keywords, Integer curPage, Integer pageSize) {
         IPage<Tencent> page = new Page<>(curPage, pageSize);
         QueryWrapper<Tencent> queryWrapper = new QueryWrapper<>();
+        if (StringUtils.isNotBlank(keywords)) {
+            queryWrapper.lambda().like(Tencent::getPhone, keywords);
+            if (keywords.length() < 10) {
+                queryWrapper.lambda().like(Tencent::getQq, keywords);
+            }
+        }
         int total = tencentService.count(queryWrapper);
         if (total > 0) {
-            queryWrapper.lambda().orderByDesc(Tencent::getId);
-
             IPage<Tencent> tencentPage = tencentService.page(page, queryWrapper);
             List<TencentPageVO> tencentPageVOList = JSON.parseArray(JSON.toJSONString(tencentPage.getRecords()), TencentPageVO.class);
             IPage<TencentPageVO> iPage = new Page<>();
