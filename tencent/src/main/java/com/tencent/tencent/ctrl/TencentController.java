@@ -159,14 +159,15 @@ public class TencentController {
         List<Tencent> tencentList = tencentService.list(new LambdaQueryWrapper<Tencent>()
                 .in(Tencent::getQq, list.stream().map(tencentSaveVO1 -> tencentSaveVO1.getQq()).collect(Collectors.toSet())));
 
-        if (CollectionUtils.isEmpty(tencentList)) {
-            return false;
-        }
 
         List<String> qqList = tencentList.stream().map(tencent -> tencent.getQq()).collect(Collectors.toList());
         list = list.stream().filter(tencentSaveVO1 -> !qqList.contains(tencentSaveVO1.getQq())).collect(Collectors.toList());
 
         List<Tencent> newTencentList = JSON.parseArray(JSON.toJSONString(list), Tencent.class);
+        for (Tencent tencent : newTencentList) {
+            tencent.setId(String.valueOf(uidGenerator.getUID()));
+        }
+
         tencentService.saveBatch(newTencentList);
         return true;
     }
