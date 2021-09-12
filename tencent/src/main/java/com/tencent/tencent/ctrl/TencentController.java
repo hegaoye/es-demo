@@ -260,7 +260,7 @@ public class TencentController {
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.setHeader("Pragma", "public");
             response.setHeader("Cache-Control", "max-age=30");
-            response.setHeader("Content-Disposition", "attachment; filename=" + downloadName);
+            response.setHeader("Content-Disposition", "attachment; filename=" + downloadName + ".csv");
             OutputStream outputStream = response.getOutputStream();
             outputStream.write(stringBuffer.toString().getBytes(StandardCharsets.UTF_8));
             outputStream.flush();
