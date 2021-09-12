@@ -239,30 +239,17 @@ public class TencentController {
             }
 
 
-            //数据分成10份
-            List<List<String>> lists = new ArrayList<>();
-            List<String> data = new ArrayList<>();
-            for (int i = 0; i < list.size(); i++) {
-                data.add(list.get(i));
-                if (((i + 1) % 10 == 0) || (i + 1 == data.size())) {
-                    lists.add(data);
-                    data = new ArrayList<>();
-                }
-            }
-
             //组装数据
             StringBuffer stringBuffer = new StringBuffer();
             stringBuffer.append("手机号,qq,qq邮箱\n");
-            for (List<String> dataList : lists) {
-                List<Tencent> tencentList = tencentService.list(new LambdaQueryWrapper<Tencent>()
-                        .in(Tencent::getPhone, dataList));
-                if (CollectionUtils.isEmpty(tencentList)) {
-                    continue;
-                }
+            List<Tencent> tencentList = tencentService.list(new LambdaQueryWrapper<Tencent>()
+                    .in(Tencent::getPhone, list));
+            if (CollectionUtils.isEmpty(tencentList)) {
+                throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
+            }
 
-                for (Tencent tencent : tencentList) {
-                    stringBuffer.append(tencent.getPhone() + "," + tencent.getQq() + "," + tencent.getEmail());
-                }
+            for (Tencent tencent : tencentList) {
+                stringBuffer.append(tencent.getPhone() + "," + tencent.getQq() + "," + tencent.getEmail() + "\n");
             }
 
 
@@ -295,18 +282,20 @@ public class TencentController {
     @ApiImplicitParams({
             @ApiImplicitParam(name = "curPage", value = "当前页", required = true, paramType = "query"),
             @ApiImplicitParam(name = "pageSize", value = "分页大小", required = true, paramType = "query"),
-            @ApiImplicitParam(name = "keywords", value = "分页大小", required = true, paramType = "query")
+            @ApiImplicitParam(name = "qq", value = "qq", required = true, paramType = "query"),
+            @ApiImplicitParam(name = "phone", value = "phone", required = true, paramType = "query")
     })
     @GetMapping(value = "/list")
-    public R list(String keywords, Integer curPage, Integer pageSize) {
+    public R list(TencentPageVO tencentPageVO, Integer curPage, Integer pageSize) {
         IPage<Tencent> page = new Page<>(curPage, pageSize);
         QueryWrapper<Tencent> queryWrapper = new QueryWrapper<>();
-        if (StringUtils.isNotBlank(keywords)) {
-            queryWrapper.lambda().like(Tencent::getPhone, keywords);
-            if (keywords.length() < 10) {
-                queryWrapper.lambda().like(Tencent::getQq, keywords);
-            }
+        if (StringUtils.isNotBlank(tencentPageVO.getPhone())) {
+            queryWrapper.lambda().like(Tencent::getPhone, tencentPageVO.getPhone());
         }
+        if (StringUtils.isNotBlank(tencentPageVO.getQq())) {
+            queryWrapper.lambda().like(Tencent::getQq, tencentPageVO.getQq());
+        }
+
         int total = tencentService.count(queryWrapper);
         if (total > 0) {
             IPage<Tencent> tencentPage = tencentService.page(page, queryWrapper);
