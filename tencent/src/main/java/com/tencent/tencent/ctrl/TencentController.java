@@ -3,29 +3,44 @@
  */
 package com.tencent.tencent.ctrl;
 
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.RandomUtil;
+import com.alibaba.fastjson.JSON;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.tencent.core.entity.R;
+import com.tencent.core.exceptions.BaseException;
+import com.tencent.core.exceptions.TencentException;
 import com.tencent.tencent.entity.Tencent;
 import com.tencent.tencent.service.TencentService;
 import com.tencent.tencent.vo.TencentPageVO;
 import com.tencent.tencent.vo.TencentSaveVO;
 import com.tencent.tencent.vo.TencentVO;
-import com.tencent.core.exceptions.TencentException;
-import com.tencent.core.exceptions.BaseException;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.tencent.core.entity.PageVO;
-import com.tencent.core.entity.R;
-import com.alibaba.fastjson.JSON;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.annotations.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import springfox.documentation.annotations.ApiIgnore;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * 腾讯数据
@@ -129,6 +144,85 @@ public class TencentController {
     public Boolean importTxt() {
         tencentService.importTxt();
         return true;
+    }
+
+
+    /**
+     * 读取文件,搜索并导出
+     *
+     * @param multipartFile 上传文件
+     * @return
+     */
+    @ApiOperation(value = "导入Excel", notes = "导入Excel")
+    @PostMapping("/upload")
+    public void upload(@RequestParam("file") MultipartFile multipartFile, HttpServletResponse response) {
+        if (null == multipartFile) {
+            log.error("文件为空错误");
+            throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
+        }
+
+        if (!multipartFile.getOriginalFilename().toLowerCase(Locale.ROOT).contains(".csv")) {
+            log.error("文件格式错误-{}", multipartFile.getOriginalFilename());
+            throw new TencentException(BaseException.BaseExceptionEnum.File_Ilegal);
+        }
+
+        File file = null;
+        try {
+            //读取文件
+            file = new File("/tmp/" + RandomUtil.randomString(7) + ".csv");
+            FileUtils.copyInputStreamToFile(multipartFile.getInputStream(), file);
+            List<String> list = FileUtil.readLines(file, Charset.defaultCharset());
+            if (CollectionUtils.isEmpty(list)) {
+                log.error("文件为空-{}", multipartFile.getOriginalFilename());
+                throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
+            }
+
+
+            //数据分成10份
+            List<List<String>> lists = new ArrayList<>();
+            List<String> data = new ArrayList<>();
+            for (int i = 0; i < list.size(); i++) {
+                data.add(list.get(i));
+                if (((i + 1) % 10 == 0) || (i + 1 == data.size())) {
+                    lists.add(data);
+                    data = new ArrayList<>();
+                }
+            }
+
+            //组装数据
+            StringBuffer stringBuffer = new StringBuffer();
+            stringBuffer.append("手机号,qq,qq邮箱\n");
+            for (List<String> dataList : lists) {
+                List<Tencent> tencentList = tencentService.list(new LambdaQueryWrapper<Tencent>()
+                        .in(Tencent::getPhone, dataList));
+                if (CollectionUtils.isEmpty(tencentList)) {
+                    continue;
+                }
+
+                for (Tencent tencent : tencentList) {
+                    stringBuffer.append(tencent.getPhone() + "," + tencent.getQq() + "," + tencent.getEmail());
+                }
+            }
+
+
+            //下载数据
+            String downloadName = DateUtil.format(new Date(), "yyyyMMddHHmmss");
+            downloadName = URLEncoder.encode(downloadName, StandardCharsets.UTF_8.name());
+            response.setContentType("application/csv");
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            response.setHeader("Pragma", "public");
+            response.setHeader("Cache-Control", "max-age=30");
+            response.setHeader("Content-Disposition", "attachment; filename=" + downloadName);
+            OutputStream outputStream = response.getOutputStream();
+            outputStream.write(stringBuffer.toString().getBytes(StandardCharsets.UTF_8));
+            outputStream.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (null != file && file.exists()) {
+                file.delete();
+            }
+        }
     }
 
     /**

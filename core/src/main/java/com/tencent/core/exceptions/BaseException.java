@@ -1,5 +1,5 @@
 /*
-* 腾讯数据
+ * 腾讯数据
  */
 package com.tencent.core.exceptions;
 
@@ -55,6 +55,7 @@ public class BaseException extends RuntimeException implements Serializable {
         //-----------------账户异常定义[1000~1050]--------------------------
         Account_Error("1000", "There is Error of Account and Password."),
         Phone_Error("1001", "Phone format msg."),
+        File_Ilegal("1002", "非法文件格式,仅支持excel 的csv 格式"),
         ;
 
 
