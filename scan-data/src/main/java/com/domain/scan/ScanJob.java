@@ -11,10 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.RandomAccessFile;
-import java.nio.charset.Charset;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -41,7 +38,6 @@ public class ScanJob {
     @Scheduled(cron = "0/10 * * * * ?")
     public void nodeDetectTask() {
         try {
-
             if (!isRunable) {
                 log.info("開始掃描文件");
                 isRunable = true;
@@ -73,43 +69,57 @@ public class ScanJob {
             String fileName = path + listFileName;
             log.info("读取文件-{}", fileName);
 
-            String s = FileUtil.readLine(new RandomAccessFile(new File(fileName), "r"), Charset.defaultCharset());
+            try {
+                List<Tencent> list = new ArrayList<>();
 
-            if (!s.contains("----")) {
-                continue;
+                BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(new File(fileName)), "UTF-8"));
+                String lineTxt = null;
+
+                while ((lineTxt = br.readLine()) != null) {
+                    lineTxt = lineTxt.replace(" ", "");
+                    if (!lineTxt.contains("----")) {
+                        continue;
+                    }
+
+                    String[] data = lineTxt.split("----");
+
+                    if (data.length == 2) {
+                        if (list.size() <= 1000) {
+                            list.add(Tencent.builder()
+                                    .qq(data[0])
+                                    .email(data[0] + "@qq.com")
+                                    .phone(data[1])
+                                    .build());
+                            continue;
+                        } else {
+                            try {
+                                this.http(list, listFileName);
+                                list.clear();
+                                continue;
+                            } catch (Exception e) {
+                                log.error("{}", e.getLocalizedMessage(), e);
+                            }
+                        }
+                    } else {
+                        if (!CollectionUtils.isEmpty(list)) {
+                            try {
+                                this.http(list, listFileName);
+                                list.clear();
+                                continue;
+                            } catch (Exception e) {
+                                log.error("{}", e.getLocalizedMessage(), e);
+                            }
+                        }
+                    }
+
+                }
+                br.close();
+                log.info("读取完毕-{}", fileName);
+            } catch (Exception e) {
+                log.error("{}", e.getLocalizedMessage(), e);
             }
 
-            String[] data = s.split("----");
-            List<Tencent> list = new ArrayList<>();
 
-            if (data.length == 2) {
-                if (list.size() <= 1000) {
-                    list.add(Tencent.builder()
-                            .qq(data[0])
-                            .email(data[0] + "@qq.com")
-                            .phone(data[1])
-                            .build());
-                    continue;
-                } else {
-                    try {
-                        this.http(list, listFileName);
-                        list.clear();
-                        continue;
-                    } catch (Exception e) {
-                        log.error("{}", e.getLocalizedMessage(), e);
-                    }
-                }
-            } else {
-                if (!CollectionUtils.isEmpty(list)) {
-                    try {
-                        this.http(list, listFileName);
-                        list.clear();
-                        continue;
-                    } catch (Exception e) {
-                        log.error("{}", e.getLocalizedMessage(), e);
-                    }
-                }
-            }
         }
 
     }
