@@ -7,6 +7,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.alibaba.fastjson.JSON;
+import com.baidu.fsg.uid.UidGenerator;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -16,7 +17,6 @@ import com.tencent.cache.service.RedisServiceSVImpl;
 import com.tencent.core.entity.R;
 import com.tencent.core.exceptions.BaseException;
 import com.tencent.core.exceptions.TencentException;
-import com.tencent.core.tools.Executors;
 import com.tencent.tencent.entity.Tencent;
 import com.tencent.tencent.service.TencentService;
 import com.tencent.tencent.vo.TencentPageVO;
@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 /**
  * 腾讯数据
@@ -61,6 +62,8 @@ public class TencentController {
     @Autowired
     private RedisServiceSVImpl redisServiceSV;
 
+    @Autowired
+    private UidGenerator uidGenerator;
 
     /**
      * 创建 腾讯数据
@@ -153,25 +156,19 @@ public class TencentController {
     @PostMapping("/build/batch")
     public Boolean batchBuild(@ApiParam(name = "批量保存", value = "传入json格式", required = true)
                               @RequestBody List<TencentSaveVO> list) {
-        Executors.fixedThreadExecutor(new Runnable() {
-            @Override
-            public void run() {
-                for (TencentSaveVO tencentSaveVO : list) {
-                    int count = tencentService.count(new LambdaQueryWrapper<Tencent>()
-                            .eq(Tencent::getQq, tencentSaveVO.getQq()));
+        List<Tencent> tencentList = tencentService.list(new LambdaQueryWrapper<Tencent>()
+                .in(Tencent::getQq, list.stream().map(tencentSaveVO1 -> tencentSaveVO1.getQq()).collect(Collectors.toSet())));
 
-                    if (count > 0) {
-                        continue;
-                    }
 
-                    Tencent newTencent = new Tencent();
-                    BeanUtils.copyProperties(tencentSaveVO, newTencent);
+        List<String> qqList = tencentList.stream().map(tencent -> tencent.getQq()).collect(Collectors.toList());
+        list = list.stream().filter(tencentSaveVO1 -> !qqList.contains(tencentSaveVO1.getQq())).collect(Collectors.toList());
 
-                    tencentService.save(newTencent);
-                }
-            }
-        });
+        List<Tencent> newTencentList = JSON.parseArray(JSON.toJSONString(list), Tencent.class);
+        for (Tencent tencent : newTencentList) {
+            tencent.setId(String.valueOf(uidGenerator.getUID()));
+        }
 
+        tencentService.saveBatch(newTencentList);
         return true;
     }
 
@@ -242,30 +239,17 @@ public class TencentController {
             }
 
 
-            //数据分成10份
-            List<List<String>> lists = new ArrayList<>();
-            List<String> data = new ArrayList<>();
-            for (int i = 0; i < list.size(); i++) {
-                data.add(list.get(i));
-                if (((i + 1) % 10 == 0) || (i + 1 == data.size())) {
-                    lists.add(data);
-                    data = new ArrayList<>();
-                }
-            }
-
             //组装数据
             StringBuffer stringBuffer = new StringBuffer();
             stringBuffer.append("手机号,qq,qq邮箱\n");
-            for (List<String> dataList : lists) {
-                List<Tencent> tencentList = tencentService.list(new LambdaQueryWrapper<Tencent>()
-                        .in(Tencent::getPhone, dataList));
-                if (CollectionUtils.isEmpty(tencentList)) {
-                    continue;
-                }
+            List<Tencent> tencentList = tencentService.list(new LambdaQueryWrapper<Tencent>()
+                    .in(Tencent::getPhone, list));
+            if (CollectionUtils.isEmpty(tencentList)) {
+                throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
+            }
 
-                for (Tencent tencent : tencentList) {
-                    stringBuffer.append(tencent.getPhone() + "," + tencent.getQq() + "," + tencent.getEmail());
-                }
+            for (Tencent tencent : tencentList) {
+                stringBuffer.append(tencent.getPhone() + "," + tencent.getQq() + "," + tencent.getEmail() + "\n");
             }
 
 
@@ -276,7 +260,7 @@ public class TencentController {
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.setHeader("Pragma", "public");
             response.setHeader("Cache-Control", "max-age=30");
-            response.setHeader("Content-Disposition", "attachment; filename=" + downloadName);
+            response.setHeader("Content-Disposition", "attachment; filename=" + downloadName + ".csv");
             OutputStream outputStream = response.getOutputStream();
             outputStream.write(stringBuffer.toString().getBytes(StandardCharsets.UTF_8));
             outputStream.flush();
@@ -298,18 +282,20 @@ public class TencentController {
     @ApiImplicitParams({
             @ApiImplicitParam(name = "curPage", value = "当前页", required = true, paramType = "query"),
             @ApiImplicitParam(name = "pageSize", value = "分页大小", required = true, paramType = "query"),
-            @ApiImplicitParam(name = "keywords", value = "分页大小", required = true, paramType = "query")
+            @ApiImplicitParam(name = "qq", value = "qq", required = true, paramType = "query"),
+            @ApiImplicitParam(name = "phone", value = "phone", required = true, paramType = "query")
     })
     @GetMapping(value = "/list")
-    public IPage<TencentPageVO> list(String keywords, Integer curPage, Integer pageSize) {
+    public R list(TencentPageVO tencentPageVO, Integer curPage, Integer pageSize) {
         IPage<Tencent> page = new Page<>(curPage, pageSize);
         QueryWrapper<Tencent> queryWrapper = new QueryWrapper<>();
-        if (StringUtils.isNotBlank(keywords)) {
-            queryWrapper.lambda().like(Tencent::getPhone, keywords);
-            if (keywords.length() < 10) {
-                queryWrapper.lambda().like(Tencent::getQq, keywords);
-            }
+        if (StringUtils.isNotBlank(tencentPageVO.getPhone())) {
+            queryWrapper.lambda().like(Tencent::getPhone, tencentPageVO.getPhone());
         }
+        if (StringUtils.isNotBlank(tencentPageVO.getQq())) {
+            queryWrapper.lambda().like(Tencent::getQq, tencentPageVO.getQq());
+        }
+
         int total = tencentService.count(queryWrapper);
         if (total > 0) {
             IPage<Tencent> tencentPage = tencentService.page(page, queryWrapper);
@@ -321,9 +307,9 @@ public class TencentController {
             iPage.setTotal(tencentPage.getTotal());
             iPage.setRecords(tencentPageVOList);
             log.debug(JSON.toJSONString(iPage));
-            return iPage;
+            return R.success(iPage);
         }
-        return new Page<>();
+        return R.success(new Page<>());
     }
 
 
