@@ -25,9 +25,9 @@ import java.util.List;
 public class ScanJob {
 
     private String path = "/home/data/";
-    private String url = "http://tencent.cg45.xyz/tencent/build/batch";
-    private String checkNameUrl = "http://tencent.cg45.xyz/tencent/check";
-    private String submitNameUrl = "http://tencent.cg45.xyz/tencent/cache";
+    private String url = "http://tencent.cg45.xyz/es/tencent/build/batch";
+    private String checkNameUrl = "http://tencent.cg45.xyz/es/tencent/check";
+    private String submitNameUrl = "http://tencent.cg45.xyz/es/tencent/cache";
 
     private Boolean isRunable = false;
     @Value("${array:1}")
