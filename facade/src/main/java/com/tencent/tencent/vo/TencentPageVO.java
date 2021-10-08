@@ -6,6 +6,7 @@ package com.tencent.tencent.vo;
 import io.swagger.annotations.ApiModelProperty;
 import com.tencent.core.base.BaseVO;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 腾讯数据 分页 对象 VO
@@ -13,6 +14,7 @@ import lombok.Data;
  * @author watson
  */
 @Data
+@EqualsAndHashCode(callSuper=false)
 public class TencentPageVO extends BaseVO implements java.io.Serializable {
     /**
      * 数据库字段:id  属性显示:id
