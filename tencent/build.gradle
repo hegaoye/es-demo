@@ -18,6 +18,7 @@ buildscript {
     }
 }
 
+
 apply plugin: 'java'
 apply plugin: 'idea'
 //apply plugin: 'spring-boot'
@@ -42,6 +43,7 @@ repositories {
 ext {
     set('springCloudVersion', 'Hoxton.SR2')
     set('springCloudAlibabaVersion', '2.2.1.RELEASE')
+    set('elasticsearchVesrion', '1.14.0')
 
 }
 dependencies {
@@ -54,6 +56,7 @@ dependencies {
     implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config:2.2.3.RELEASE'
     implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-sentinel'
     implementation 'com.alibaba.boot:nacos-config-spring-boot-starter:0.2.7'
+
 
     //----------- mybatis mysql druid start--------------
     implementation 'mysql:mysql-connector-java:8.0.15'
@@ -82,6 +85,13 @@ dependencies {
     implementation 'com.github.pagehelper:pagehelper:5.1.11'
 
     implementation 'cn.hutool:hutool-all:5.1.5'
+    //-------------elasticsearch-------------
+//    implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+
+    implementation 'org.elasticsearch:elasticsearch:7.14.0'
+    implementation 'org.elasticsearch.client:elasticsearch-rest-high-level-client:7.14.0'
+    implementation 'org.elasticsearch.client:elasticsearch-rest-client:7.14.0'
+
 
     implementation project(path: ':core')
     implementation project(path: ':common')
@@ -97,5 +107,17 @@ dependencyManagement {
         mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
         mavenBom "com.alibaba.cloud:spring-cloud-alibaba-dependencies:${springCloudAlibabaVersion}"
 
+
     }
 }
+
+//allprojects {
+//    configurations.all {
+//        resolutionStrategy {
+//            dependencySubstitution {
+//                substitute module('org.elasticsearch:elasticsearch') with module('org.elasticsearch:elasticsearch:7.14.0')
+//                substitute module('org.elasticsearch.client:elasticsearch-rest-high-level-client') with module('org.elasticsearch.client:elasticsearch-rest-high-level-client:7.14.0')
+//            }
+//        }
+//    }
+//}

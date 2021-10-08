@@ -1,15 +1,18 @@
 spring:
   application:
     name: tencent-api
+    jackson:
+      date-format: yyyy-MM-dd HH:mm:ss
+      time-zone: Asia/Shanghai
   cloud:
     nacos:
       discovery:
-        server-addr: ${REGISTER_HOST}
+        server-addr: ${REGISTER_HOST:test.cg45.xyz}:${REGISTER_PORT:31014}
         group: DEFAULT_GROUP
-        namespace: ${NAMESPACE}
+        namespace: ${NAMESPACE:c8554b49-0071-4c2a-bae3-3499a01693b1}
       config:
-        server-addr: ${REGISTER_HOST}
+        server-addr: ${REGISTER_HOST:test.cg45.xyz}:${REGISTER_PORT:31014}
         group: DEFAULT_GROUP
         name: ${CONFIG_NAME:tencent}
         file-extension: yml
-        namespace: ${NAMESPACE}
+        namespace: ${NAMESPACE:c8554b49-0071-4c2a-bae3-3499a01693b1}
