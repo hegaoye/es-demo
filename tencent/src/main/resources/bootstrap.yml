@@ -7,12 +7,12 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: ${REGISTER_HOST:nacos.public-prod}:${REGISTER_PORT:8848}
+        server-addr: ${REGISTER_HOST:test.cg45.xyz}:${REGISTER_PORT:31014}
         group: DEFAULT_GROUP
-        namespace: ${NAMESPACE:05038403-dd3c-45ed-99e9-00cb13facde3}
+        namespace: ${NAMESPACE:c8554b49-0071-4c2a-bae3-3499a01693b1}
       config:
-        server-addr: ${REGISTER_HOST:nacos.public-prod}:${REGISTER_PORT:8848}
+        server-addr: ${REGISTER_HOST:test.cg45.xyz}:${REGISTER_PORT:31014}
         group: DEFAULT_GROUP
         name: ${CONFIG_NAME:tencent}
         file-extension: yml
-        namespace: ${NAMESPACE:05038403-dd3c-45ed-99e9-00cb13facde3}
+        namespace: ${NAMESPACE:c8554b49-0071-4c2a-bae3-3499a01693b1}
