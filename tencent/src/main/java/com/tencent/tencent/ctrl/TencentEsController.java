@@ -301,6 +301,7 @@ public class TencentEsController {
         WildcardQueryBuilder phoneQuery = QueryBuilders.wildcardQuery("phone", StringUtils.isBlank(phone) ? "" : phone + "*");
         BoolQueryBuilder query = QueryBuilders.boolQuery()
                 .should(qqQuery)
+                .should(phoneQuery)
                 .should(emailQuery);
         page.setTotalRow(tencentEsService.count(DB_INDEX, qqQuery));
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
