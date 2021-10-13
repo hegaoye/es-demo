@@ -23,6 +23,7 @@ import io.swagger.annotations.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.index.query.WildcardQueryBuilder;
@@ -66,7 +67,7 @@ public class TencentEsController {
     private UidGenerator uidGenerator;
 
     //索引庫
-    private final static String DB_INDEX="tencent";
+    private final static String DB_INDEX = "tencent";
 
     /**
      * 创建 腾讯数据
@@ -94,7 +95,8 @@ public class TencentEsController {
     }
 
     /**
-     *  测试缓存
+     * 测试缓存
+     *
      * @return
      */
     @ApiOperation(value = "测试缓存", notes = "测试缓存")
@@ -140,14 +142,13 @@ public class TencentEsController {
         Tencent newTencent = new Tencent();
         BeanUtils.copyProperties(tencentSaveVO, newTencent);
 
-        tencentEsService.insertOrUpdateOne(DB_INDEX,newTencent);
+        tencentEsService.insertOrUpdateOne(DB_INDEX, newTencent);
 
         tencentSaveVO = new TencentSaveVO();
         BeanUtils.copyProperties(newTencent, tencentSaveVO);
         log.debug(JSON.toJSONString(tencentSaveVO));
         return tencentSaveVO;
     }
-
 
 
     /**
@@ -164,7 +165,7 @@ public class TencentEsController {
             tencent.setId(String.valueOf(uidGenerator.getUID()));
         }
 
-        tencentEsService.insertBatch(DB_INDEX,newTencentList);
+        tencentEsService.insertBatch(DB_INDEX, newTencentList);
         return true;
     }
 
@@ -178,19 +179,17 @@ public class TencentEsController {
     @ApiOperation(value = "根据条件qq查询腾讯数据一个详情信息", notes = "根据qq查询")
     @GetMapping("/load/qq/{qq}")
     public TencentVO loadByQq(@PathVariable String qq) {
-        if(StringUtils.isBlank(qq)){
+        if (StringUtils.isBlank(qq)) {
             throw new TencentException(BaseException.BaseExceptionEnum.Empty_Param);
         }
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         TermQueryBuilder termQuery = QueryBuilders.termQuery("qq", qq);
         searchSourceBuilder.query(termQuery);
-        List<Tencent> tencentList = tencentEsService.search(DB_INDEX, searchSourceBuilder,Tencent.class);
-        TencentVO tencentVO = new TencentVO();
-        if(!CollectionUtils.isEmpty(tencentList)){
-            BeanUtils.copyProperties(tencentList.get(0), tencentVO);
+        List<TencentVO> tencentList = tencentEsService.search(DB_INDEX, searchSourceBuilder, TencentVO.class);
+        if (CollectionUtils.isEmpty(tencentList)) {
+            throw new TencentException(BaseException.BaseExceptionEnum.Result_Not_Exist);
         }
-        log.debug(JSON.toJSONString(tencentVO));
-        return tencentVO;
+        return tencentList.get(0);
     }
 
     /**
@@ -205,11 +204,11 @@ public class TencentEsController {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         TermQueryBuilder termQuery = QueryBuilders.termQuery("email", email);
         searchSourceBuilder.query(termQuery);
-        Tencent tencent = (Tencent) tencentEsService.search(DB_INDEX, new SearchSourceBuilder(),Tencent.class);
-        TencentVO tencentVO = new TencentVO();
-        BeanUtils.copyProperties(tencent, tencentVO);
-        log.debug(JSON.toJSONString(tencentVO));
-        return tencentVO;
+        List<TencentVO> tencentList = tencentEsService.search(DB_INDEX, searchSourceBuilder, TencentVO.class);
+        if (CollectionUtils.isEmpty(tencentList)) {
+            throw new TencentException(BaseException.BaseExceptionEnum.Result_Not_Exist);
+        }
+        return tencentList.get(0);
     }
 
 
@@ -277,7 +276,8 @@ public class TencentEsController {
             }
         }
     }
-/**
+
+    /**
      * 查询腾讯数据信息集合
      *
      * @return 分页对象
@@ -291,20 +291,23 @@ public class TencentEsController {
     })
     @GetMapping(value = "/list")
     public R list(TencentPageVO tencentPageVO, Integer curPage, Integer pageSize) {
-        Page<Tencent> page = new Page<>(curPage, pageSize);
+        Page<TencentVO> page = new Page<>(pageSize, curPage);
         String qq = tencentPageVO.getQq();
         String email = tencentPageVO.getEmail();
         String phone = tencentPageVO.getPhone();
-        WildcardQueryBuilder qqQuery = QueryBuilders.wildcardQuery("qq", StringUtils.isBlank(qq)?"*":qq+"*");
-        WildcardQueryBuilder emailQuery = QueryBuilders.wildcardQuery("email", StringUtils.isBlank(email)?"*":email+"*");
-        WildcardQueryBuilder phoneQuery = QueryBuilders.wildcardQuery("phone", StringUtils.isBlank(phone)?"*":phone+"*");
+
+        WildcardQueryBuilder qqQuery = QueryBuilders.wildcardQuery("qq", StringUtils.isBlank(qq) ? "" : qq + "*");
+        WildcardQueryBuilder emailQuery = QueryBuilders.wildcardQuery("email", StringUtils.isBlank(email) ? "" : email + "*");
+        WildcardQueryBuilder phoneQuery = QueryBuilders.wildcardQuery("phone", StringUtils.isBlank(phone) ? "" : phone + "*");
+        BoolQueryBuilder query = QueryBuilders.boolQuery()
+                .should(qqQuery)
+                .should(emailQuery);
+        page.setTotalRow(tencentEsService.count(DB_INDEX, qqQuery));
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
-                .query(qqQuery)
-                .query(emailQuery)
-                .query(phoneQuery)
-                .from((page.getCurPage()-1) * page.getPageSize())
+                .query(query)
+                .from((page.getCurPage() - 1) * page.getPageSize())
                 .size(page.getPageSize()).trackTotalHits(true);
-        List<Tencent> list = tencentEsService.search(DB_INDEX, sourceBuilder, Tencent.class);
+        List<TencentVO> list = tencentEsService.search(DB_INDEX, sourceBuilder, TencentVO.class);
         if (!CollectionUtils.isEmpty(list)) {
             page.setRecords(list);
             log.debug(JSON.toJSONString(page));
@@ -351,7 +354,7 @@ public class TencentEsController {
         }
         Tencent newTencent = new Tencent();
         BeanUtils.copyProperties(tencentVO, newTencent);
-        tencentEsService.deleteOne(DB_INDEX,newTencent);
+        tencentEsService.deleteOne(DB_INDEX, newTencent);
         return R.success("删除成功");
     }
 

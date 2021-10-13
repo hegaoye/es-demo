@@ -4,6 +4,8 @@
 package com.tencent.tencent.service;
 
 
+import com.tencent.tencent.entity.Tencent;
+
 /**
  * 腾讯数据
  *
@@ -17,6 +19,9 @@ public interface TencentEsService {
      * @throws Exception
      */
     void importTxt() throws Exception;
+
+
+
 }
 
 

@@ -15,6 +15,8 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.core.CountRequest;
+import org.elasticsearch.client.core.CountResponse;
 import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.CreateIndexResponse;
 import org.elasticsearch.client.indices.GetIndexRequest;
@@ -247,6 +249,25 @@ public class TencentEsServiceImpl implements TencentEsService {
     }
 
     /**
+     * 統計數量
+     * @param idxName
+     * @param builder
+     * @return
+     * @throws IOException
+     */
+    public long count(String idxName,QueryBuilder builder) {
+        CountRequest request = new CountRequest(idxName);
+        request.query(builder);
+        CountResponse response = null;
+        try {
+            response = restHighLevelClient.count(request, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return response.getCount();
+    }
+
+    /**
      * 删除index
      *
      * @param idxName
@@ -346,4 +367,5 @@ public class TencentEsServiceImpl implements TencentEsService {
         }
 
     }
+
 }
