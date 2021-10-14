@@ -24,10 +24,7 @@ import io.swagger.annotations.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.TermQueryBuilder;
-import org.elasticsearch.index.query.WildcardQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -299,12 +296,18 @@ public class TencentEsController {
 
         WildcardQueryBuilder qqQuery = QueryBuilders.wildcardQuery("qq", StringUtils.isBlank(qq) ? "" : qq + "*");
         WildcardQueryBuilder emailQuery = QueryBuilders.wildcardQuery("email", StringUtils.isBlank(email) ? "" : email + "*");
-        WildcardQueryBuilder phoneQuery = QueryBuilders.wildcardQuery("phone", StringUtils.isBlank(phone) ? "" : phone + "*");
-        BoolQueryBuilder query = QueryBuilders.boolQuery()
-                .should(qqQuery)
-                .should(phoneQuery)
-                .should(emailQuery);
-        page.setTotal(tencentEsService.count(DB_INDEX, qqQuery));
+        WildcardQueryBuilder phoneQuery = QueryBuilders.wildcardQuery("phone", StringUtils.isBlank(phone) ? "" : "*" + phone + "*");
+        BoolQueryBuilder query = QueryBuilders.boolQuery();
+        if (StringUtils.isNotBlank(qq)) {
+            query.must(qqQuery);
+        }
+        if (StringUtils.isNotBlank(email)) {
+            query.must(emailQuery);
+        }
+        if (StringUtils.isNotBlank(phone)) {
+            query.must(phoneQuery);
+        }
+        page.setTotal(tencentEsService.count(DB_INDEX,query));
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
                 .query(query)
                 .from((int) ((page.getCurrent() - 1) * page.getSize()))
