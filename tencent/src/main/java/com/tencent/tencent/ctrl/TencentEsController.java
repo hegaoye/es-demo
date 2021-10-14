@@ -8,9 +8,10 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.alibaba.fastjson.JSON;
 import com.baidu.fsg.uid.UidGenerator;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tencent.cache.entity.RedisKey;
 import com.tencent.cache.service.RedisServiceSVImpl;
-import com.tencent.core.entity.Page;
 import com.tencent.core.entity.R;
 import com.tencent.core.exceptions.BaseException;
 import com.tencent.core.exceptions.TencentException;
@@ -291,7 +292,7 @@ public class TencentEsController {
     })
     @GetMapping(value = "/list")
     public R list(TencentPageVO tencentPageVO, Integer curPage, Integer pageSize) {
-        Page<TencentVO> page = new Page<>(pageSize, curPage);
+        IPage<TencentVO> page = new Page<>(curPage, pageSize);
         String qq = tencentPageVO.getQq();
         String email = tencentPageVO.getEmail();
         String phone = tencentPageVO.getPhone();
@@ -303,11 +304,11 @@ public class TencentEsController {
                 .should(qqQuery)
                 .should(phoneQuery)
                 .should(emailQuery);
-        page.setTotalRow(tencentEsService.count(DB_INDEX, qqQuery));
+        page.setTotal(tencentEsService.count(DB_INDEX, qqQuery));
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
                 .query(query)
-                .from((page.getCurPage() - 1) * page.getPageSize())
-                .size(page.getPageSize()).trackTotalHits(true);
+                .from((int) ((page.getCurrent() - 1) * page.getSize()))
+                .size((int) page.getSize()).trackTotalHits(true);
         List<TencentVO> list = tencentEsService.search(DB_INDEX, sourceBuilder, TencentVO.class);
         if (!CollectionUtils.isEmpty(list)) {
             page.setRecords(list);
