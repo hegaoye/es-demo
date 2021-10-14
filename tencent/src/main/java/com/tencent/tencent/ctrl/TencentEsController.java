@@ -296,7 +296,7 @@ public class TencentEsController {
 
         WildcardQueryBuilder qqQuery = QueryBuilders.wildcardQuery("qq", StringUtils.isBlank(qq) ? "" : qq + "*");
         WildcardQueryBuilder emailQuery = QueryBuilders.wildcardQuery("email", StringUtils.isBlank(email) ? "" : email + "*");
-        WildcardQueryBuilder phoneQuery = QueryBuilders.wildcardQuery("phone", StringUtils.isBlank(phone) ? "" : "*" + phone + "*");
+        WildcardQueryBuilder phoneQuery = QueryBuilders.wildcardQuery("phone", StringUtils.isBlank(phone) ? "" : "*" + phone);
         BoolQueryBuilder query = QueryBuilders.boolQuery();
         if (StringUtils.isNotBlank(qq)) {
             query.must(qqQuery);
