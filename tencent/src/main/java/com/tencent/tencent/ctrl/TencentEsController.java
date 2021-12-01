@@ -298,7 +298,7 @@ public class TencentEsController {
         String phone = tencentPageVO.getPhone();
         BoolQueryBuilder query = QueryBuilders.boolQuery();
         if(StringUtils.isNotBlank(qq)){
-            WildcardQueryBuilder qqQuery = QueryBuilders.wildcardQuery("qq", qq + "*");
+            TermQueryBuilder qqQuery = QueryBuilders.termQuery("qq", qq);
             query.should(qqQuery);
         }
         if(StringUtils.isNotBlank(email)){
@@ -306,7 +306,7 @@ public class TencentEsController {
             query.should(emailQuery);
         }
         if(StringUtils.isNotBlank(phone)){
-            WildcardQueryBuilder phoneQuery = QueryBuilders.wildcardQuery("phone",phone + "*");
+            TermQueryBuilder phoneQuery = QueryBuilders.termQuery("phone",phone);
             query.should(phoneQuery);
         }
         page.setTotal(tencentEsService.count(DB_INDEX, query));
