@@ -8,10 +8,12 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.alibaba.fastjson.JSON;
 import com.baidu.fsg.uid.UidGenerator;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tencent.cache.entity.RedisKey;
 import com.tencent.cache.service.RedisServiceSVImpl;
+import com.tencent.core.constant.RegularConst;
 import com.tencent.core.entity.R;
 import com.tencent.core.exceptions.BaseException;
 import com.tencent.core.exceptions.TencentException;
@@ -24,10 +26,7 @@ import io.swagger.annotations.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.TermQueryBuilder;
-import org.elasticsearch.index.query.WildcardQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +46,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * 腾讯数据
@@ -247,13 +247,21 @@ public class TencentEsController {
             //组装数据
             StringBuffer stringBuffer = new StringBuffer();
             stringBuffer.append("手机号,qq,qq邮箱\n");
-//            List<Tencent> tencentList = tencentEsServiceImpl.list(new LambdaQueryWrapper<Tencent>()
-            List<Tencent> tencentList = new ArrayList<>();
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+            String content = list.get(0);
+            String para = "qq";
+            if (Pattern.matches(RegularConst.CHINA_PATTERN, content)) {
+                para = "phone";
+            }
+            TermsQueryBuilder termsQueryBuilder = QueryBuilders.termsQuery(para, list);
+            searchSourceBuilder.query(termsQueryBuilder);
+
+            List<TencentVO> tencentList = tencentEsService.search(DB_INDEX, searchSourceBuilder, TencentVO.class);
             if (CollectionUtils.isEmpty(tencentList)) {
                 throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
             }
 
-            for (Tencent tencent : tencentList) {
+            for (TencentVO tencent : tencentList) {
                 stringBuffer.append(tencent.getPhone() + "," + tencent.getQq() + "," + tencent.getEmail() + "\n");
             }
 
@@ -297,16 +305,16 @@ public class TencentEsController {
         String email = tencentPageVO.getEmail();
         String phone = tencentPageVO.getPhone();
         BoolQueryBuilder query = QueryBuilders.boolQuery();
-        if(StringUtils.isNotBlank(qq)){
+        if (StringUtils.isNotBlank(qq)) {
             TermQueryBuilder qqQuery = QueryBuilders.termQuery("qq", qq);
             query.should(qqQuery);
         }
-        if(StringUtils.isNotBlank(email)){
-            WildcardQueryBuilder emailQuery = QueryBuilders.wildcardQuery("email",email + "*");
+        if (StringUtils.isNotBlank(email)) {
+            WildcardQueryBuilder emailQuery = QueryBuilders.wildcardQuery("email", email + "*");
             query.should(emailQuery);
         }
-        if(StringUtils.isNotBlank(phone)){
-            TermQueryBuilder phoneQuery = QueryBuilders.termQuery("phone",phone);
+        if (StringUtils.isNotBlank(phone)) {
+            TermQueryBuilder phoneQuery = QueryBuilders.termQuery("phone", phone);
             query.should(phoneQuery);
         }
         page.setTotal(tencentEsService.count(DB_INDEX, query));
