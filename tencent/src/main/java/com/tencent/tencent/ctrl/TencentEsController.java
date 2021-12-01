@@ -296,15 +296,20 @@ public class TencentEsController {
         String qq = tencentPageVO.getQq();
         String email = tencentPageVO.getEmail();
         String phone = tencentPageVO.getPhone();
-
-        WildcardQueryBuilder qqQuery = QueryBuilders.wildcardQuery("qq", StringUtils.isBlank(qq) ? "" : qq + "*");
-        WildcardQueryBuilder emailQuery = QueryBuilders.wildcardQuery("email", StringUtils.isBlank(email) ? "" : email + "*");
-        WildcardQueryBuilder phoneQuery = QueryBuilders.wildcardQuery("phone", StringUtils.isBlank(phone) ? "" : phone + "*");
-        BoolQueryBuilder query = QueryBuilders.boolQuery()
-                .should(qqQuery)
-                .should(phoneQuery)
-                .should(emailQuery);
-        page.setTotal(tencentEsService.count(DB_INDEX, qqQuery));
+        BoolQueryBuilder query = QueryBuilders.boolQuery();
+        if(StringUtils.isNotBlank(qq)){
+            WildcardQueryBuilder qqQuery = QueryBuilders.wildcardQuery("qq", qq + "*");
+            query.should(qqQuery);
+        }
+        if(StringUtils.isNotBlank(email)){
+            WildcardQueryBuilder emailQuery = QueryBuilders.wildcardQuery("email",email + "*");
+            query.should(emailQuery);
+        }
+        if(StringUtils.isNotBlank(phone)){
+            WildcardQueryBuilder phoneQuery = QueryBuilders.wildcardQuery("phone",phone + "*");
+            query.should(phoneQuery);
+        }
+        page.setTotal(tencentEsService.count(DB_INDEX, query));
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
                 .query(query)
                 .from((int) ((page.getCurrent() - 1) * page.getSize()))
