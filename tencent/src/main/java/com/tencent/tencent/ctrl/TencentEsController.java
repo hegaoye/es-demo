@@ -5,6 +5,7 @@ package com.tencent.tencent.ctrl;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.alibaba.fastjson.JSON;
 import com.baidu.fsg.uid.UidGenerator;
@@ -17,6 +18,7 @@ import com.tencent.core.constant.RegularConst;
 import com.tencent.core.entity.R;
 import com.tencent.core.exceptions.BaseException;
 import com.tencent.core.exceptions.TencentException;
+import com.tencent.core.tools.ListUtils;
 import com.tencent.tencent.entity.Tencent;
 import com.tencent.tencent.service.TencentEsServiceImpl;
 import com.tencent.tencent.vo.TencentPageVO;
@@ -46,7 +48,10 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 腾讯数据
@@ -66,6 +71,7 @@ public class TencentEsController {
 
     @Autowired
     private UidGenerator uidGenerator;
+
 
     //索引庫
     private final static String DB_INDEX = "tencent";
@@ -253,19 +259,38 @@ public class TencentEsController {
             if (Pattern.matches(RegularConst.CHINA_PATTERN, content)) {
                 para = "phone";
             }
-            TermsQueryBuilder termsQueryBuilder = QueryBuilders.termsQuery(para, list);
-            searchSourceBuilder.query(termsQueryBuilder);
+            //没50条数据进行分割数据
+            List<List<String>> listList = ListUtils.averageAssign(list, 30);
+            //根据分割结果创建线程
 
-            List<TencentVO> tencentList = tencentEsService.search(DB_INDEX, searchSourceBuilder, TencentVO.class);
+            ExecutorService executor = ThreadUtil.newExecutor(listList.size(), 20);
+            List<TencentVO> tencentList = new ArrayList<>();
+            for (List<String> splitList : listList) {
+                String finalPara = para;
+                executor.execute(() -> {
+                    for (String param : splitList) {
+                        TermQueryBuilder termQueryBuilder = QueryBuilders.termQuery(finalPara, param);
+                        searchSourceBuilder.query(termQueryBuilder);
+                        tencentList.addAll(tencentEsService.search(DB_INDEX, searchSourceBuilder, TencentVO.class));
+                    }
+//                    TermsQueryBuilder termsQueryBuilder = QueryBuilders.termsQuery(finalPara, splitList);
+//                    searchSourceBuilder.query(termsQueryBuilder);
+//                    tencentList.addAll(tencentEsService.search(DB_INDEX, searchSourceBuilder, TencentVO.class));
+//                    ThreadUtil.safeSleep(5000);
+                });
+            }
+            executor.shutdown();
+            while (!executor.isTerminated()) {
+                ThreadUtil.sleep(2000);
+            }
+
             if (CollectionUtils.isEmpty(tencentList)) {
                 throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
             }
-
-            for (TencentVO tencent : tencentList) {
+            //查询接去重处理
+            tencentList.stream().distinct().forEach(tencent -> {
                 stringBuffer.append(tencent.getPhone() + "," + tencent.getQq() + "," + tencent.getEmail() + "\n");
-            }
-
-
+            });
             //下载数据
             String downloadName = DateUtil.format(new Date(), "yyyyMMddHHmmss");
             downloadName = URLEncoder.encode(downloadName, StandardCharsets.UTF_8.name());
@@ -324,53 +349,17 @@ public class TencentEsController {
                 .size((int) page.getSize()).trackTotalHits(true);
         List<TencentVO> list = tencentEsService.search(DB_INDEX, sourceBuilder, TencentVO.class);
         if (!CollectionUtils.isEmpty(list)) {
-            page.setRecords(list);
+            int originalSize= list.size();
+            List distinctList = list.stream().distinct().collect(Collectors.toList());
+            int distinctSize = originalSize- distinctList.size();
+            page.setRecords(distinctList);
+            if(distinctSize !=0){
+                page.setTotal(distinctSize);
+            }
             log.debug(JSON.toJSONString(page));
             return R.success(page);
         }
         return R.success(new Page<>());
-    }
-
-
-    /**
-     * 修改 腾讯数据
-     *
-     * @return R
-     */
-    @ApiOperation(value = "修改Tencent", notes = "修改Tencent")
-    @PutMapping("/modify")
-    public boolean modify(@ApiParam(name = "修改Tencent", value = "传入json格式", required = true)
-                          @RequestBody TencentVO tencentVO) {
-        if (StringUtils.isBlank(tencentVO.getId())) {
-            throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
-        }
-        Tencent newTencent = new Tencent();
-        BeanUtils.copyProperties(tencentVO, newTencent);
-        tencentEsService.insertOrUpdateOne(DB_INDEX, newTencent);
-        return true;
-    }
-
-
-    /**
-     * 删除 腾讯数据
-     *
-     * @return R
-     */
-    @ApiOperation(value = "删除Tencent", notes = "删除Tencent")
-    @ApiImplicitParams({
-            @ApiImplicitParam(name = "id", value = "id", paramType = "query"),
-            @ApiImplicitParam(name = "qq", value = "qq", paramType = "query"),
-            @ApiImplicitParam(name = "email", value = "邮箱", paramType = "query")
-    })
-    @DeleteMapping("/delete")
-    public R delete(@ApiIgnore TencentVO tencentVO) {
-        if (StringUtils.isBlank(tencentVO.getId())) {
-            throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
-        }
-        Tencent newTencent = new Tencent();
-        BeanUtils.copyProperties(tencentVO, newTencent);
-        tencentEsService.deleteOne(DB_INDEX, newTencent);
-        return R.success("删除成功");
     }
 
 }

@@ -15,11 +15,6 @@ import lombok.Data;
 public class TencentVO implements java.io.Serializable {
 
     /**
-     * 数据库字段:id  属性显示:id
-     */
-    @ApiModelProperty(value = "id")
-    private java.lang.String id;
-    /**
      * 数据库字段:qq  属性显示:qq
      */
     @ApiModelProperty(value = "qq")

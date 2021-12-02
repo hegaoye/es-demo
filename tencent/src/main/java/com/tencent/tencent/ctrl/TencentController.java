@@ -313,48 +313,4 @@ public class TencentController {
         return R.success(new Page<>());
     }
 
-
-    /**
-     * 修改 腾讯数据
-     *
-     * @return R
-     */
-    @ApiOperation(value = "修改Tencent", notes = "修改Tencent")
-    @PutMapping("/modify")
-    public boolean modify(@ApiParam(name = "修改Tencent", value = "传入json格式", required = true)
-                          @RequestBody TencentVO tencentVO) {
-        if (StringUtils.isBlank(tencentVO.getId())) {
-            throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
-        }
-        Tencent newTencent = new Tencent();
-        BeanUtils.copyProperties(tencentVO, newTencent);
-        boolean isUpdated = tencentService.update(newTencent, new LambdaQueryWrapper<Tencent>()
-                .eq(Tencent::getId, tencentVO.getId()));
-        return isUpdated;
-    }
-
-
-    /**
-     * 删除 腾讯数据
-     *
-     * @return R
-     */
-    @ApiOperation(value = "删除Tencent", notes = "删除Tencent")
-    @ApiImplicitParams({
-            @ApiImplicitParam(name = "id", value = "id", paramType = "query"),
-            @ApiImplicitParam(name = "qq", value = "qq", paramType = "query"),
-            @ApiImplicitParam(name = "email", value = "邮箱", paramType = "query")
-    })
-    @DeleteMapping("/delete")
-    public R delete(@ApiIgnore TencentVO tencentVO) {
-        if (StringUtils.isBlank(tencentVO.getId())) {
-            throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
-        }
-        Tencent newTencent = new Tencent();
-        BeanUtils.copyProperties(tencentVO, newTencent);
-        tencentService.remove(new LambdaQueryWrapper<Tencent>()
-                .eq(Tencent::getId, tencentVO.getId()));
-        return R.success("删除成功");
-    }
-
 }
