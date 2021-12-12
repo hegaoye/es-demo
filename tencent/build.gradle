@@ -92,6 +92,9 @@ dependencies {
     implementation 'org.elasticsearch.client:elasticsearch-rest-high-level-client:7.14.0'
     implementation 'org.elasticsearch.client:elasticsearch-rest-client:7.14.0'
 
+    // poi
+    implementation group: 'org.apache.poi', name: 'poi-ooxml', version: '4.1.2'
+
 
     implementation project(path: ':core')
     implementation project(path: ':common')

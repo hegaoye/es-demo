@@ -5,15 +5,22 @@ package com.tencent.tencent.ctrl;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.resource.ResourceUtil;
+import cn.hutool.core.text.csv.CsvReader;
+import cn.hutool.core.text.csv.CsvUtil;
+import cn.hutool.core.text.csv.CsvWriter;
 import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.poi.excel.ExcelReader;
+import cn.hutool.poi.excel.ExcelUtil;
+import cn.hutool.poi.excel.ExcelWriter;
 import com.alibaba.fastjson.JSON;
 import com.baidu.fsg.uid.UidGenerator;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tencent.cache.entity.RedisKey;
 import com.tencent.cache.service.RedisServiceSVImpl;
+import com.tencent.core.constant.FileTypeConst;
 import com.tencent.core.constant.RegularConst;
 import com.tencent.core.entity.R;
 import com.tencent.core.exceptions.BaseException;
@@ -30,26 +37,23 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.graalvm.compiler.debug.CSVUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import springfox.documentation.annotations.ApiIgnore;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -225,72 +229,23 @@ public class TencentEsController {
      * @param multipartFile 上传文件
      * @return
      */
-    @ApiOperation(value = "上传csv文件", notes = "上传csv文件")
+    @ApiOperation(value = "上传csv或者xlsx文件格式", notes = "上传csv或者xlsx文件格式")
     @PostMapping("/upload")
     public void upload(@RequestParam("file") MultipartFile multipartFile, HttpServletResponse response) {
         if (null == multipartFile) {
             log.error("文件为空错误");
             throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
         }
-
-        if (!multipartFile.getOriginalFilename().toLowerCase(Locale.ROOT).contains(".csv")) {
-            log.error("文件格式错误-{}", multipartFile.getOriginalFilename());
-            throw new TencentException(BaseException.BaseExceptionEnum.File_Ilegal);
+        //文件原始名字
+        String fileName = multipartFile.getOriginalFilename().toLowerCase(Locale.ROOT);
+        List<String> list = null;
+        if (fileName.contains(FileTypeConst.CVS_TYPE_NAME)) {
+            list = readCsvList(multipartFile);
+        } else {
+            list = readXlsList(multipartFile);
         }
-
-        File file = null;
+        StringBuffer stringBuffer = getTencentVOList(list);
         try {
-            //读取文件
-            file = new File("/tmp/" + RandomUtil.randomString(7) + ".csv");
-            FileUtils.copyInputStreamToFile(multipartFile.getInputStream(), file);
-            List<String> list = FileUtil.readLines(file, Charset.defaultCharset());
-            if (CollectionUtils.isEmpty(list)) {
-                log.error("文件为空-{}", multipartFile.getOriginalFilename());
-                throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
-            }
-
-
-            //组装数据
-            StringBuffer stringBuffer = new StringBuffer();
-            stringBuffer.append("手机号,qq,qq邮箱\n");
-            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-            String content = list.get(0);
-            String para = "qq";
-            if (Pattern.matches(RegularConst.CHINA_PATTERN, content)) {
-                para = "phone";
-            }
-            //没50条数据进行分割数据
-            List<List<String>> listList = ListUtils.averageAssign(list, 30);
-            //根据分割结果创建线程
-
-            ExecutorService executor = ThreadUtil.newExecutor(listList.size(), 20);
-            List<TencentVO> tencentList = new ArrayList<>();
-            for (List<String> splitList : listList) {
-                String finalPara = para;
-                executor.execute(() -> {
-                    for (String param : splitList) {
-                        TermQueryBuilder termQueryBuilder = QueryBuilders.termQuery(finalPara, param);
-                        searchSourceBuilder.query(termQueryBuilder);
-                        tencentList.addAll(tencentEsService.search(DB_INDEX, searchSourceBuilder, TencentVO.class));
-                    }
-//                    TermsQueryBuilder termsQueryBuilder = QueryBuilders.termsQuery(finalPara, splitList);
-//                    searchSourceBuilder.query(termsQueryBuilder);
-//                    tencentList.addAll(tencentEsService.search(DB_INDEX, searchSourceBuilder, TencentVO.class));
-//                    ThreadUtil.safeSleep(5000);
-                });
-            }
-            executor.shutdown();
-            while (!executor.isTerminated()) {
-                ThreadUtil.sleep(2000);
-            }
-
-            if (CollectionUtils.isEmpty(tencentList)) {
-                throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
-            }
-            //查询接去重处理
-            tencentList.stream().distinct().forEach(tencent -> {
-                stringBuffer.append(tencent.getPhone() + "," + tencent.getQq() + "," + tencent.getEmail() + "\n");
-            });
             //下载数据
             String downloadName = DateUtil.format(new Date(), "yyyyMMddHHmmss");
             downloadName = URLEncoder.encode(downloadName, StandardCharsets.UTF_8.name());
@@ -298,17 +253,112 @@ public class TencentEsController {
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.setHeader("Pragma", "public");
             response.setHeader("Cache-Control", "max-age=30");
-            response.setHeader("Content-Disposition", "attachment; filename=" + downloadName + ".csv");
+            response.setHeader("Content-Disposition", "attachment; filename=" + downloadName + FileTypeConst.CVS_TYPE_NAME);
             OutputStream outputStream = response.getOutputStream();
             outputStream.write(stringBuffer.toString().getBytes(StandardCharsets.UTF_8));
             outputStream.flush();
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
+        }
+
+    }
+
+    /**
+     * excel文件读取
+     *
+     * @param multipartFile
+     * @return
+     */
+    private List<String> readXlsList(MultipartFile multipartFile) {
+        InputStream inputStream = null;
+        try {
+            inputStream = multipartFile.getInputStream();
+        } catch (IOException e) {
+            throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
+        }
+        ExcelReader reader = ExcelUtil.getReader(inputStream);
+        String readString = reader.readAsText(false);
+        List<String> list = Arrays.asList(readString.split("\n"));
+        if (CollectionUtils.isEmpty(list)) {
+            throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
+        }
+        return list;
+    }
+
+    /**
+     * cvs文件 读取
+     *
+     * @param multipartFile
+     * @return
+     */
+    private List<String> readCsvList(MultipartFile multipartFile) {
+        List<String> list = null;
+        //读取文件
+        File file = new File("/tmp/" + RandomUtil.randomString(7) + FileTypeConst.CVS_TYPE_NAME);
+        try {
+            FileUtils.copyInputStreamToFile(multipartFile.getInputStream(), file);
+            list = FileUtil.readLines(file, Charset.defaultCharset());
+            if (CollectionUtils.isEmpty(list)) {
+                log.error("文件为空-{}", multipartFile.getOriginalFilename());
+                throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
+            }
+        } catch (IOException e) {
+            throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
         } finally {
             if (null != file && file.exists()) {
                 file.delete();
             }
         }
+        return list;
+    }
+
+    /**
+     * 根据读取内容查询es
+     *
+     * @param list
+     * @return
+     */
+    private StringBuffer getTencentVOList(List<String> list) {
+        //组装数据
+        StringBuffer stringBuffer = new StringBuffer();
+        stringBuffer.append("手机号,qq,qq邮箱\n");
+        //查询ES数据
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        String content = list.get(0);
+        String para = "qq";
+        if (Pattern.matches(RegularConst.CHINA_PATTERN, content)) {
+            para = "phone";
+        }
+        //没50条数据进行分割数据
+        List<List<String>> listList = ListUtils.averageAssign(list, 30);
+        //根据分割结果创建线程
+
+        ExecutorService executor = ThreadUtil.newExecutor(listList.size(), 20);
+        List<TencentVO> tencentList = new ArrayList<>();
+        for (List<String> splitList : listList) {
+            String finalPara = para;
+            executor.execute(() -> {
+                for (String param : splitList) {
+                    TermQueryBuilder termQueryBuilder = QueryBuilders.termQuery(finalPara, param);
+                    searchSourceBuilder.query(termQueryBuilder);
+                    tencentList.addAll(tencentEsService.search(DB_INDEX, searchSourceBuilder, TencentVO.class));
+                }
+            });
+        }
+        executor.shutdown();
+        while (!executor.isTerminated()) {
+            ThreadUtil.sleep(2000);
+        }
+
+        if (CollectionUtils.isEmpty(tencentList)) {
+            throw new TencentException(BaseException.BaseExceptionEnum.Ilegal_Param);
+        }
+        //查询接去重处理
+        //查询接去重处理
+        tencentList.stream().distinct().forEach(tencent -> {
+            stringBuffer.append(tencent.getPhone() + "," + tencent.getQq() + "," + tencent.getEmail() + "\n");
+        });
+        return stringBuffer;
     }
 
     /**
@@ -349,11 +399,11 @@ public class TencentEsController {
                 .size((int) page.getSize()).trackTotalHits(true);
         List<TencentVO> list = tencentEsService.search(DB_INDEX, sourceBuilder, TencentVO.class);
         if (!CollectionUtils.isEmpty(list)) {
-            int originalSize= list.size();
+            int originalSize = list.size();
             List distinctList = list.stream().distinct().collect(Collectors.toList());
-            int distinctSize = originalSize- distinctList.size();
+            int distinctSize = originalSize - distinctList.size();
             page.setRecords(distinctList);
-            if(distinctSize !=0){
+            if (distinctSize != 0) {
                 page.setTotal(distinctSize);
             }
             log.debug(JSON.toJSONString(page));
