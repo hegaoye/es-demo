@@ -326,11 +326,11 @@ public class TencentEsController {
         if (Pattern.matches(RegularConst.CHINA_PATTERN, content)) {
             para = "phone";
         }
-        //没50条数据进行分割数据
+        //没30条数据进行分割数据
         List<List<String>> listList = ListUtils.averageAssign(list, 30);
         //根据分割结果创建线程
-
-        ExecutorService executor = ThreadUtil.newExecutor(listList.size(), 20);
+        int poolSize = list.size()>20?20:list.size();
+        ExecutorService executor = ThreadUtil.newExecutor(poolSize);
         List<TencentVO> tencentList = new ArrayList<>();
         for (List<String> splitList : listList) {
             String finalPara = para;
