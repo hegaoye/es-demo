@@ -91,7 +91,8 @@ dependencies {
     implementation 'org.elasticsearch:elasticsearch:7.14.0'
     implementation 'org.elasticsearch.client:elasticsearch-rest-high-level-client:7.14.0'
     implementation 'org.elasticsearch.client:elasticsearch-rest-client:7.14.0'
-
+    //yml加密
+    implementation 'com.github.ulisesbocchio:jasypt-spring-boot-starter:2.1.2'
     // poi
     implementation group: 'org.apache.poi', name: 'poi-ooxml', version: '4.1.2'
 
