@@ -52,10 +52,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
-    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery:2.2.3.RELEASE'
-    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config:2.2.3.RELEASE'
+//    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery:2.2.3.RELEASE'
+//    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config:2.2.3.RELEASE'
     implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-sentinel'
-    implementation 'com.alibaba.boot:nacos-config-spring-boot-starter:0.2.7'
+//    implementation 'com.alibaba.boot:nacos-config-spring-boot-starter:0.2.7'
 
 
     //----------- mybatis mysql druid start--------------
@@ -83,7 +83,7 @@ dependencies {
     implementation 'com.alibaba:fastjson:1.2.59'
     implementation 'com.github.ben-manes.caffeine:caffeine:2.8.1'
     implementation 'com.github.pagehelper:pagehelper:5.1.11'
-
+    implementation 'org.apache.commons:commons-lang3:3.4'
     implementation 'cn.hutool:hutool-all:5.1.5'
     //-------------elasticsearch-------------
 //    implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
